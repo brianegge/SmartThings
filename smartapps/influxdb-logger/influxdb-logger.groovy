@@ -175,7 +175,8 @@ def updated() {
     state.path = "/write?db=${state.databaseName}"
     state.headers = [:] 
     state.headers.put("HOST", "${state.databaseHost}:${state.databasePort}")
-    state.headers.put("Content-Type", "application/x-www-form-urlencoded")
+    //state.headers.put("Content-Type", "application/x-www-form-urlencoded")
+    state.headers.put("Content-Type", "text/plain charset=utf-8")
     if (state.databaseUser && state.databasePass) {
         state.headers.put("Authorization", encodeCredentialsBasic(state.databaseUser, state.databasePass))
     }
@@ -571,13 +572,15 @@ def logSystemProperties() {
                 def hubIP = '"' + escapeStringForInfluxDB(h.localIP) + '"'
                 def hubStatus = '"' + escapeStringForInfluxDB(h.status) + '"'
                 def batteryInUse = ("false" == h.hub.getDataValue("batteryInUse")) ? "0i" : "1i"
-                def hubUptime = h.hub.getDataValue("uptime") + 'i'
+                def hubUptime = h.hub.getDataValue("uptime")
                 def zigbeePowerLevel = h.hub.getDataValue("zigbeePowerLevel") + 'i'
                 def zwavePowerLevel =  '"' + escapeStringForInfluxDB(h.hub.getDataValue("zwavePowerLevel")) + '"'
                 def firmwareVersion =  '"' + escapeStringForInfluxDB(h.firmwareVersionString) + '"'
 
                 def data = "_stHub,locationId=${locationId},locationName=${locationName},hubId=${hubId},hubName=${hubName},hubIP=${hubIP} "
-                data += "status=${hubStatus},batteryInUse=${batteryInUse},uptime=${hubUptime},zigbeePowerLevel=${zigbeePowerLevel},zwavePowerLevel=${zwavePowerLevel},firmwareVersion=${firmwareVersion}"
+                data += "status=${hubStatus},batteryInUse=${batteryInUse}"
+                if (hubUptime) { data += "uptime=${hubUptime}i," }
+                data += ",zigbeePowerLevel=${zigbeePowerLevel},zwavePowerLevel=${zwavePowerLevel},firmwareVersion=${firmwareVersion}"
                 postToInfluxDB(data)
             } catch (e) {
 				logger("logSystemProperties(): Unable to log Hub properties: ${e}","error")
@@ -637,8 +640,9 @@ def postToInfluxDB(data) {
  *  Handles response from post made in postToInfluxDB().
  **/
 def handleInfluxResponse(physicalgraph.device.HubResponse hubResponse) {
-    if(hubResponse.status >= 400) {
-		logger("postToInfluxDB(): Something went wrong! Response from InfluxDB: Headers: ${hubResponse.headers}, Body: ${hubResponse.body}","error")
+    logger("handleInfluxResponse(" + hubResponse + ")","trace")
+    if(hubResponse.status != 204) {
+		logger("postToInfluxDB(): Something went wrong! Response from InfluxDB: \nHeaders: ${hubResponse.headers}, \nBody: ${hubResponse.body}","error")
     }
 }
 
@@ -790,8 +794,14 @@ private escapeStringForInfluxDB(str) {
 private getGroupName(id) {
 
     if (id == null) {return 'Home'}
-    else if (id == 'XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX') {return 'Kitchen'}
-    else if (id == 'XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX') {return 'Lounge'}
-    else if (id == 'XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX') {return 'Office'}
+else if (id == '0bfd811c-3931-4bb9-a4f6-ff85b9fd9124') return 'Garage'
+else if (id == '0ca7572d-c796-48ea-90bf-79472791dd88') return 'Presence'
+else if (id == '30e50384-29a3-482b-a811-9c5b54a20414') return 'Office'
+else if (id == '31eb7d1d-ec58-4d63-bf9d-82e430a50ba8') return 'Master Bedroom'
+else if (id == '4f3cc2b6-4d4f-4f52-a1fb-2624dec0640a') return 'Boiler Room'
+else if (id == '76973841-1133-4c88-898a-9e06934a1ad7') return 'Dining Room'
+else if (id == 'a44a7a30-973f-4d26-bbc3-32ed7ebff7ec') return 'Outside'
+else if (id == 'abae3859-c9fa-482f-94c2-c0b42cf628fb') return 'Kitchen'
+else if (id == 'b2e7e362-1c68-4d08-aa11-d04f38c28119') return 'Great Room'
     else {return 'Unknown'}    
 }
